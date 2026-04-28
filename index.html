@@ -4297,22 +4297,31 @@ async function salvarUploadDoc(docId,key){
   if(file.type!=='application/pdf'){alert('Apenas arquivos PDF');return;}
   const doc=(D.docs||[]).find(x=>x.id===docId);if(!doc)return;
   const tamanho=file.size>1024*1024?(file.size/1024/1024).toFixed(1)+' MB':(file.size/1024).toFixed(0)+' KB';
-  toast('Enviando '+file.name+'…');
-  closeModal();
 
-  // Determine the key
+  // Collect form values BEFORE closing modal
   let useKey=key;
   if(doc.tipo==='anual'){
     const ano=document.getElementById('ud-ano')?.value||String(new Date().getFullYear());
     useKey=ano;
   } else if(doc.tipo==='multiplo'){
-    const label=document.getElementById('ud-label')?.value||file.name.replace('.pdf','');
+    const label=document.getElementById('ud-label')?.value?.trim()||file.name.replace('.pdf','');
     useKey=label;
   }
 
+  toast('Enviando '+file.name+'…');
+  closeModal();
+
   // Upload to Supabase Storage
-  const path=docId+'/'+(useKey||Date.now()).toString().replace(/\//g,'_')+'.pdf';
-  const url=await sbUploadPDF(file,path);
+  const path=docId+'/'+(useKey||Date.now()).toString().replace(/\//g,'_').replace(/\s+/g,'_')+'.pdf';
+  let url=null;
+  try{
+    url=await sbUploadPDF(file,path);
+  }catch(e){console.error('Upload error:',e);}
+
+  if(!url){
+    alert('Falha no upload. Verifique a conexão com o Supabase Storage.');
+    return;
+  }
 
   const entry={nome:file.name,tamanho,data:todayStr(),autor:SESSION.name,storageUrl:url,base64:null};
 
@@ -4324,7 +4333,9 @@ async function salvarUploadDoc(docId,key){
     doc.entradas[useKey]=entry;
   }
 
-  saveData();renderDocs();
+  saveData();
+  if(typeof sbPushData==='function')sbPushData();
+  renderDocs();
   toast('✓ PDF enviado — '+file.name);
 }
 
