@@ -2611,10 +2611,13 @@ function toggleMetaB(){
       extraLabel=`<div class="fr"><label class="fl">Empreendimento / Label</label>
         <input class="fi" id="ud-label" placeholder="ex: Aria, Bororó..." value="">
       </div>`;
-    } else if(key){
-      extraLabel=`<div class="fr"><label class="fl">Período</label>
-        <div class="fi" style="background:var(--s2);font-size:13px">${key}</div>
-      </div>`;
+    } else if(doc.tipo==='mensal'){
+      const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      const curYear=new Date().getFullYear();
+      const yyOpts=[curYear-1,curYear,curYear+1];
+      let preMes='', preYY=String(curYear).slice(2);
+      if(key&&key.includes('/')){const p=key.split('/');preMes=p[0];preYY=p[1];}
+      extraLabel=`<div class="g2f"><div class="fr"><label class="fl">Mes</label><select class="fi fsel" id="ud-mes"><option value="">selecione</option>${meses.map(m=>`<option value="${m}"${m===preMes?' selected':''}>${m}</option>`).join('')}</select></div><div class="fr"><label class="fl">Ano</label><select class="fi fsel" id="ud-ano">${yyOpts.map(y=>`<option value="${String(y).slice(2)}"${String(y).slice(2)===preYY?' selected':''}>${y}</option>`).join('')}</select></div></div>`;
     }
     body.innerHTML=`
       ${extraLabel}
@@ -4306,6 +4309,11 @@ async function salvarUploadDoc(docId,key){
   } else if(doc.tipo==='multiplo'){
     const label=document.getElementById('ud-label')?.value?.trim()||file.name.replace('.pdf','');
     useKey=label;
+  } else if(doc.tipo==='mensal'){
+    const mes=document.getElementById('ud-mes')?.value;
+    const yy=document.getElementById('ud-ano')?.value;
+    if(!mes){alert('Selecione o mes');return;}
+    useKey=mes+'/'+yy;
   }
 
   toast('Enviando '+file.name+'…');
