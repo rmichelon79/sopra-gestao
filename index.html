@@ -787,15 +787,54 @@ async function sbLoad(){
   }catch(e){console.warn('Supabase offline:',e.message);return null;}
 }
 
+// Serialized save with merge — prevents race conditions when multiple updates happen
+let _saveQueue = Promise.resolve();
 async function sbSave(){
-  try{
-    await sbFetch('/rest/v1/dados?id=eq.sopra',{
-      method:'PATCH',
-      headers:{'Prefer':'resolution=merge-duplicates'},
-      body:JSON.stringify({payload:D,updated_at:new Date().toISOString()})
-    });
-  }catch(e){console.warn('sbSave error:',e);}
+  // Chain saves so they execute one at a time, and merge with latest server state to avoid clobbering
+  _saveQueue = _saveQueue.then(async ()=>{
+    try{
+      // Re-fetch latest server payload to merge changes (other users may have edited)
+      const fetchRes = await sbFetch('/rest/v1/dados?id=eq.sopra&select=payload,updated_at');
+      if(fetchRes.ok){
+        const rows = await fetchRes.json();
+        if(rows && rows.length && rows[0].payload){
+          const server = rows[0].payload;
+          // Merge: server docs entries union with our docs entries (we win for our session)
+          if(server.docs && D.docs){
+            D.docs.forEach(localDoc=>{
+              const serverDoc = server.docs.find(s=>s.id===localDoc.id);
+              if(!serverDoc) return;
+              if(localDoc.tipo==='multiplo'){
+                const localArr = Array.isArray(localDoc.entradas)?localDoc.entradas:[];
+                const serverArr = Array.isArray(serverDoc.entradas)?serverDoc.entradas:[];
+                const seen = new Set(localArr.map(e=>e.storageUrl||e.nome));
+                serverArr.forEach(se=>{
+                  const k = se.storageUrl||se.nome;
+                  if(!seen.has(k)){ localArr.push(se); seen.add(k); }
+                });
+                localDoc.entradas = localArr;
+              } else {
+                const localObj = (typeof localDoc.entradas==='object'&&!Array.isArray(localDoc.entradas))?localDoc.entradas:{};
+                const serverObj = (typeof serverDoc.entradas==='object'&&!Array.isArray(serverDoc.entradas))?serverDoc.entradas:{};
+                Object.keys(serverObj).forEach(k=>{
+                  if(!localObj[k]) localObj[k] = serverObj[k];
+                });
+                localDoc.entradas = localObj;
+              }
+            });
+          }
+        }
+      }
+      await sbFetch('/rest/v1/dados?id=eq.sopra',{
+        method:'PATCH',
+        headers:{'Prefer':'resolution=merge-duplicates'},
+        body:JSON.stringify({payload:D,updated_at:new Date().toISOString()})
+      });
+    }catch(e){console.warn('sbSave error:',e);}
+  });
+  return _saveQueue;
 }
+
 
 async function sbInit(){
   const syncMsg=document.createElement('div');
