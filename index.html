@@ -3438,9 +3438,14 @@ function renderDocs(){
         const key=mes+'/'+yy;
         const entry=e[key];
         const ok=entry&&(entry.storageUrl||entry.base64);
-        h+=`<div style="background:var(--sf);padding:10px 8px;text-align:center;cursor:pointer" onclick="${ce?`openModal('uploadDoc','${doc.id}|${key}')`:ok?`abrirDoc('${doc.id}','${key}','mensal')`:''}">
+        h+=`<div style="background:var(--sf);padding:10px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px">
           <div style="font-size:12px;font-weight:${ok?'600':'400'};color:${ok?'var(--te)':'var(--mu)'}">${mes}</div>
-          ${ok?`<div style="font-size:9px;color:var(--te);margin-top:2px">✓ PDF</div>`:`<div style="font-size:9px;color:var(--fa);margin-top:2px">${ce?'upload':'—'}</div>`}
+          ${ok?`
+            <button class="btn btn-sm btn-gh" style="font-size:10px;padding:2px 8px" onclick="abrirDoc('${doc.id}','${key}','mensal')">↗ Abrir</button>
+            ${ce?`<button class="btn btn-sm" style="font-size:10px;padding:2px 8px" onclick="openModal('uploadDoc','${doc.id}|${key}')">Trocar</button>`:''}
+          `:`
+            ${ce?`<button class="btn btn-sm btn-gh" style="font-size:10px;padding:2px 8px" onclick="openModal('uploadDoc','${doc.id}|${key}')">+ Upload</button>`:`<div style="font-size:9px;color:var(--fa)">—</div>`}
+          `}
         </div>`;
       });
       h+=`</div>`;
