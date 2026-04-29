@@ -3370,7 +3370,7 @@ function gerarDatasParaCadencia(cad,inicio,fim){
 
 // ── DOCUMENTOS ────────────────────────────────────────────────────────────
 function renderDocs(){
-  const ce=can('edit');
+  const ce=(SESSION.role==="admin");
   if(!D.docs)D.docs=JSON.parse(JSON.stringify(DEFAULTS.docs));
   const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const curYear=new Date().getFullYear();
