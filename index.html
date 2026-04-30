@@ -3409,6 +3409,37 @@ function gerarDatasParaCadencia(cad,inicio,fim){
 
 // ── DOCUMENTOS ────────────────────────────────────────────────────────────
 function renderDocs(){
+  // Refresh docs from server in background to avoid stale cache (especially for non-admin users)
+  if(SB_ONLINE && !window._docsRefreshed){
+    window._docsRefreshed = true;
+    sbFetch('/rest/v1/dados?id=eq.sopra&select=payload').then(async r=>{
+      if(!r.ok) return;
+      const rows = await r.json();
+      if(!rows || !rows.length) return;
+      const serverDocs = rows[0].payload && rows[0].payload.docs;
+      if(!serverDocs) return;
+      let changed = false;
+      serverDocs.forEach(sd=>{
+        const ld = (D.docs||[]).find(x=>x.id===sd.id);
+        if(!ld){ D.docs.push(sd); changed=true; return; }
+        const lE = JSON.stringify(ld.entradas);
+        const sE = JSON.stringify(sd.entradas);
+        if(lE !== sE){
+          ld.entradas = sd.entradas;
+          ld.tipo = sd.tipo;
+          ld.nome = sd.nome;
+          ld.icone = sd.icone;
+          ld.desc = sd.desc;
+          changed = true;
+        }
+      });
+      if(changed){
+        try{localStorage.setItem(DATA_KEY,JSON.stringify(D));}catch(e){}
+        renderDocs();
+      }
+    }).catch(()=>{});
+  }
+
   const ce=(SESSION.role==="admin");
   if(!D.docs)D.docs=JSON.parse(JSON.stringify(DEFAULTS.docs));
   const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
