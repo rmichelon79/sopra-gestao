@@ -808,6 +808,11 @@ async function sbSave(){
         if(rows && rows.length && rows[0].payload){
           const server = rows[0].payload;
           // Merge: server docs entries union with our docs entries (we win for our session)
+          // Respect recent local deletions — do not restore entries that were just deleted
+          const recentDeletes = (D._deletedDocEntries || []).filter(d=>(Date.now()-d.when)<300000); // 5min window
+          const isDeleted = (docId, key, tipo)=>{
+            return recentDeletes.some(d=>d.docId===docId && String(d.key)===String(key) && d.tipo===tipo);
+          };
           if(server.docs && D.docs){
             D.docs.forEach(localDoc=>{
               const serverDoc = server.docs.find(s=>s.id===localDoc.id);
@@ -816,16 +821,18 @@ async function sbSave(){
                 const localArr = Array.isArray(localDoc.entradas)?localDoc.entradas:[];
                 const serverArr = Array.isArray(serverDoc.entradas)?serverDoc.entradas:[];
                 const seen = new Set(localArr.map(e=>e.storageUrl||e.nome));
+                // Build set of deleted keys/identifiers for this doc
+                const deletedIds = new Set(recentDeletes.filter(d=>d.docId===localDoc.id&&d.tipo==='multiplo').map(d=>d.deletedKey||''));
                 serverArr.forEach(se=>{
                   const k = se.storageUrl||se.nome;
-                  if(!seen.has(k)){ localArr.push(se); seen.add(k); }
+                  if(!seen.has(k) && !deletedIds.has(k)){ localArr.push(se); seen.add(k); }
                 });
                 localDoc.entradas = localArr;
               } else {
                 const localObj = (typeof localDoc.entradas==='object'&&!Array.isArray(localDoc.entradas))?localDoc.entradas:{};
                 const serverObj = (typeof serverDoc.entradas==='object'&&!Array.isArray(serverDoc.entradas))?serverDoc.entradas:{};
                 Object.keys(serverObj).forEach(k=>{
-                  if(!localObj[k]) localObj[k] = serverObj[k];
+                  if(!localObj[k] && !isDeleted(localDoc.id, k, localDoc.tipo)) localObj[k] = serverObj[k];
                 });
                 localDoc.entradas = localObj;
               }
@@ -3418,7 +3425,9 @@ function gerarDatasParaCadencia(cad,inicio,fim){
 // ── DOCUMENTOS ────────────────────────────────────────────────────────────
 function renderDocs(){
   // Refresh docs from server in background to avoid stale cache (especially for non-admin users)
-  if(SB_ONLINE && !window._docsRefreshed){
+  // Skip if there are recent local deletions (to avoid restoring them before save completes)
+  const hasRecentDelete = (D._deletedDocEntries||[]).some(d=>(Date.now()-d.when)<10000);
+  if(SB_ONLINE && !window._docsRefreshed && !hasRecentDelete){
     window._docsRefreshed = true;
     sbFetch('/rest/v1/dados?id=eq.sopra&select=payload').then(async r=>{
       if(!r.ok) return;
@@ -3521,6 +3530,7 @@ function renderDocs(){
           ${ok?`
             <button class="btn btn-sm btn-gh" style="font-size:10px;padding:2px 8px" onclick="abrirDoc('${doc.id}','${key}','mensal')">↗ Abrir</button>
             ${ce?`<button class="btn btn-sm" style="font-size:10px;padding:2px 8px" onclick="openModal('uploadDoc','${doc.id}|${key}')">Trocar</button>`:''}
+            ${ce?`<button class="btn btn-sm btn-d" style="font-size:10px;padding:2px 6px" onclick="deletarDoc('${doc.id}','${key}','mensal')">×</button>`:''}
           `:`
             ${ce?`<button class="btn btn-sm btn-gh" style="font-size:10px;padding:2px 8px" onclick="openModal('uploadDoc','${doc.id}|${key}')">+ Upload</button>`:`<div style="font-size:9px;color:var(--fa)">—</div>`}
           `}
@@ -4447,16 +4457,39 @@ function abrirDoc(docId,key,tipo){
   alert('PDF não encontrado');
 }
 
-function deletarDoc(docId,key,tipo){
+
+async function deletarDoc(docId,key,tipo){
   if(!confirm('Excluir este documento?'))return;
   const doc=(D.docs||[]).find(x=>x.id===docId);if(!doc)return;
+  let entry=null;
+  if(tipo==='multiplo'){
+    entry=(doc.entradas||[])[key];
+  } else {
+    entry=(doc.entradas||{})[key];
+  }
+  // Try to extract storage path from URL and delete file from Supabase Storage
+  if(entry && entry.storageUrl){
+    try{
+      const m=entry.storageUrl.match(/\/documentos\/(.+)$/);
+      if(m && m[1]) await sbDeletePDF(m[1]);
+    }catch(e){console.warn('Storage delete failed:',e);}
+  }
+  // Remove from local D.docs
   if(tipo==='multiplo'){
     doc.entradas=(doc.entradas||[]).filter((_,i)=>i!==key);
   } else {
-    delete doc.entradas[key];
+    if(doc.entradas) delete doc.entradas[key];
   }
+  // Mark deletion timestamp so the save merge does not restore it
+  if(!D._deletedDocEntries) D._deletedDocEntries=[];
+  // For multiplo, store the storageUrl/name so merge can match on identity (not index, which shifts)
+  const deletedKey = tipo==='multiplo' && entry ? (entry.storageUrl || entry.nome) : key;
+  D._deletedDocEntries.push({docId, key, tipo, deletedKey, when:Date.now()});
+  // Keep only last 200 deletions
+  if(D._deletedDocEntries.length>200) D._deletedDocEntries=D._deletedDocEntries.slice(-200);
   saveData();renderDocs();toast('Documento excluído');
 }
+
 
 function salvarEdicaoTipoDoc(docId){
   const doc=(D.docs||[]).find(x=>x.id===docId);if(!doc)return;
