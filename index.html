@@ -1269,6 +1269,7 @@ function renderKpis(){
     <div class="ph-l"><div class="title">KPIs operacionais</div>
     <div class="sub">Agrupados por empreendimento e área</div></div>
     <div class="ph-r">
+      <button class="btn btn-gh btn-sm" onclick="abrirMapaKpis()">📊 Mapa visual</button>
       ${ce?`<button class="btn btn-p btn-sm" onclick="openModal('addKpi')">+ Novo KPI</button>`:''}
       <button class="btn btn-ex btn-sm" onclick="exportPDF('kpis')">↓ PDF</button>
     </div>
@@ -4669,6 +4670,130 @@ function abrirMapaOkrs(){
   win.document.write(html);
   win.document.close();
 }
+
+// MAPA VISUAL DE KPIs
+function abrirMapaKpis(){
+  const kpis = D.kpis || [];
+  if(!kpis.length){alert('Nenhum KPI configurado');return;}
+  const today = new Date().toLocaleDateString('pt-BR');
+  const empColors = {
+    'SOPRA':   {bg:'#1f1d1a', ink:'#fff'},
+    'ARIA':    {bg:'#7F77DD', ink:'#fff'},
+    'ALTANA':  {bg:'#1D9E75', ink:'#fff'},
+    'BORORO':  {bg:'#D85A30', ink:'#fff'}
+  };
+  const empColor = (e)=> empColors[e] || {bg:'#888780', ink:'#fff'};
+  const lastVal = (k)=> (k.history && k.history.length) ? (k.history[k.history.length-1].val ?? k.history[k.history.length-1].pct) : null;
+  const statusOf = (k)=>{
+    const v = lastVal(k);
+    if(v === null || v === undefined) return 'gray';
+    return calcStatus(k.op, k.meta, v);
+  };
+  const statusColor = (s)=> s==='ok'?'#1D9E75':s==='risk'?'#E24B4A':s==='warn'?'#EF9F27':'#999';
+  const statusLabel = (s)=> s==='ok'?'No alvo':s==='risk'?'Crítico':s==='warn'?'Atenção':'Sem dados';
+  const fmtVal = (v, unit)=> v === null || v === undefined ? '—' : (Math.round(v*10)/10) + (unit?(' '+unit):'');
+  const fmtMeta = (k)=> (k.op||'') + ' ' + fmtVal(k.meta, k.unit);
+  const byEmp = {};
+  kpis.forEach(k=>{
+    const e = k.empreendimento || 'SOPRA';
+    const a = k.areaKpi || 'Geral';
+    if(!byEmp[e]) byEmp[e] = {};
+    if(!byEmp[e][a]) byEmp[e][a] = [];
+    byEmp[e][a].push(k);
+  });
+  const empOrder = Object.keys(byEmp).sort((a,b)=>{
+    if(a==='SOPRA') return -1;
+    if(b==='SOPRA') return 1;
+    return a.localeCompare(b);
+  });
+  let totalOk=0, totalWarn=0, totalRisk=0, totalGray=0;
+  kpis.forEach(k=>{const s=statusOf(k); if(s==='ok')totalOk++; else if(s==='warn')totalWarn++; else if(s==='risk')totalRisk++; else totalGray++;});
+  let html = '<!DOCTYPE html><html lang=' + String.fromCharCode(34) + 'pt-BR' + String.fromCharCode(34) + '><head>'
+    + '<meta charset=' + String.fromCharCode(34) + 'UTF-8' + String.fromCharCode(34) + '>'
+    + '<title>Mapa de KPIs - Sopra ' + today + '</title>'
+    + '<link href=' + String.fromCharCode(34) + 'https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap' + String.fromCharCode(34) + ' rel=' + String.fromCharCode(34) + 'stylesheet' + String.fromCharCode(34) + '>'
+    + '<style>'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:DM Sans,sans-serif;background:#F7F5F0;color:#1f1d1a;padding:20px;min-height:100vh}'
+    + '.map-header{text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #d6cfbe}'
+    + '.map-header h1{font-family:DM Serif Display,serif;font-size:38px;font-weight:400;margin-bottom:8px}'
+    + '.map-header .sub{font-size:12px;color:#7a7166;letter-spacing:.04em;text-transform:uppercase}'
+    + '.summary{display:flex;justify-content:center;gap:18px;margin-top:14px;flex-wrap:wrap}'
+    + '.summary-pill{display:flex;align-items:center;gap:8px;padding:6px 14px;background:#fff;border:1px solid #d6cfbe;border-radius:999px;font-size:12px}'
+    + '.summary-pill .dot{width:9px;height:9px;border-radius:50%}'
+    + '.summary-pill .num{font-family:DM Mono,monospace;font-weight:700;font-size:14px}'
+    + '.emp-section{margin-bottom:22px}'
+    + '.emp-header{display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:10px;margin-bottom:10px}'
+    + '.emp-name{font-family:DM Serif Display,serif;font-size:22px;font-weight:400;flex:1;line-height:1}'
+    + '.emp-count{font-family:DM Mono,monospace;font-size:11px;opacity:.85}'
+    + '.areas-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}'
+    + '.area-card{background:#fff;border:1px solid #d6cfbe;border-radius:12px;padding:14px;break-inside:avoid;page-break-inside:avoid}'
+    + '.area-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7a7166;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #ece6d5}'
+    + '.kpi-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed #ece6d5}'
+    + '.kpi-row:last-child{border-bottom:none}'
+    + '.kpi-status{width:10px;height:10px;border-radius:50%;flex-shrink:0}'
+    + '.kpi-info{flex:1;min-width:0}'
+    + '.kpi-name{font-size:12px;font-weight:500;line-height:1.3;color:#1f1d1a}'
+    + '.kpi-meta{font-size:10px;color:#7a7166;margin-top:2px;font-family:DM Mono,monospace}'
+    + '.kpi-val{text-align:right;font-family:DM Mono,monospace;flex-shrink:0;min-width:75px}'
+    + '.kpi-val .num{font-size:14px;font-weight:600;line-height:1}'
+    + '.kpi-val .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;opacity:.7}'
+    + '.footer{text-align:center;margin-top:28px;padding-top:14px;border-top:1px solid #d6cfbe;font-size:11px;color:#999}'
+    + '.print-btn{position:fixed;top:16px;right:16px;background:#1f1d1a;color:#F7F5F0;border:none;padding:10px 18px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;z-index:100}'
+    + '.print-btn:hover{background:#000}'
+    + '@media print{body{padding:10px;background:#fff}.print-btn{display:none}.area-card,.emp-section{break-inside:avoid;page-break-inside:avoid}}'
+    + '@page{size:A3 landscape;margin:8mm}'
+    + '</style></head><body>'
+    + '<button class=' + String.fromCharCode(34) + 'print-btn' + String.fromCharCode(34) + ' onclick=' + String.fromCharCode(34) + 'window.print()' + String.fromCharCode(34) + '>🖨 Imprimir / Salvar PDF</button>'
+    + '<div class=' + String.fromCharCode(34) + 'map-header' + String.fromCharCode(34) + '>'
+    + '<h1>Mapa de KPIs Sopra · 2026</h1>'
+    + '<div class=' + String.fromCharCode(34) + 'sub' + String.fromCharCode(34) + '>' + kpis.length + ' KPIs · ' + empOrder.length + ' empreendimentos · ' + today + '</div>'
+    + '<div class=' + String.fromCharCode(34) + 'summary' + String.fromCharCode(34) + '>'
+    + '<div class=' + String.fromCharCode(34) + 'summary-pill' + String.fromCharCode(34) + '><div class=' + String.fromCharCode(34) + 'dot' + String.fromCharCode(34) + ' style=' + String.fromCharCode(34) + 'background:#1D9E75' + String.fromCharCode(34) + '></div><span class=' + String.fromCharCode(34) + 'num' + String.fromCharCode(34) + '>' + totalOk + '</span><span>No alvo</span></div>'
+    + '<div class=' + String.fromCharCode(34) + 'summary-pill' + String.fromCharCode(34) + '><div class=' + String.fromCharCode(34) + 'dot' + String.fromCharCode(34) + ' style=' + String.fromCharCode(34) + 'background:#EF9F27' + String.fromCharCode(34) + '></div><span class=' + String.fromCharCode(34) + 'num' + String.fromCharCode(34) + '>' + totalWarn + '</span><span>Atenção</span></div>'
+    + '<div class=' + String.fromCharCode(34) + 'summary-pill' + String.fromCharCode(34) + '><div class=' + String.fromCharCode(34) + 'dot' + String.fromCharCode(34) + ' style=' + String.fromCharCode(34) + 'background:#E24B4A' + String.fromCharCode(34) + '></div><span class=' + String.fromCharCode(34) + 'num' + String.fromCharCode(34) + '>' + totalRisk + '</span><span>Crítico</span></div>'
+    + '<div class=' + String.fromCharCode(34) + 'summary-pill' + String.fromCharCode(34) + '><div class=' + String.fromCharCode(34) + 'dot' + String.fromCharCode(34) + ' style=' + String.fromCharCode(34) + 'background:#999' + String.fromCharCode(34) + '></div><span class=' + String.fromCharCode(34) + 'num' + String.fromCharCode(34) + '>' + totalGray + '</span><span>Sem dados</span></div>'
+    + '</div></div>';
+  empOrder.forEach(emp=>{
+    const ec = empColor(emp);
+    const empAreas = byEmp[emp];
+    const empTotal = Object.values(empAreas).reduce((s,arr)=>s+arr.length,0);
+    html += '<div class=' + String.fromCharCode(34) + 'emp-section' + String.fromCharCode(34) + '>'
+      + '<div class=' + String.fromCharCode(34) + 'emp-header' + String.fromCharCode(34) + ' style=' + String.fromCharCode(34) + 'background:' + ec.bg + ';color:' + ec.ink + String.fromCharCode(34) + '>'
+      + '<div class=' + String.fromCharCode(34) + 'emp-name' + String.fromCharCode(34) + '>' + emp + '</div>'
+      + '<div class=' + String.fromCharCode(34) + 'emp-count' + String.fromCharCode(34) + '>' + empTotal + ' KPI' + (empTotal===1?'':'s') + '</div>'
+      + '</div><div class=' + String.fromCharCode(34) + 'areas-grid' + String.fromCharCode(34) + '>';
+    const areas = Object.keys(empAreas).sort();
+    areas.forEach(area=>{
+      const list = empAreas[area].slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+      html += '<div class=' + String.fromCharCode(34) + 'area-card' + String.fromCharCode(34) + '>'
+        + '<div class=' + String.fromCharCode(34) + 'area-name' + String.fromCharCode(34) + '>' + area + ' · ' + list.length + '</div>';
+      list.forEach(k=>{
+        const s = statusOf(k);
+        const v = lastVal(k);
+        html += '<div class=' + String.fromCharCode(34) + 'kpi-row' + String.fromCharCode(34) + '>'
+          + '<div class=' + String.fromCharCode(34) + 'kpi-status' + String.fromCharCode(34) + ' style=' + String.fromCharCode(34) + 'background:' + statusColor(s) + String.fromCharCode(34) + '></div>'
+          + '<div class=' + String.fromCharCode(34) + 'kpi-info' + String.fromCharCode(34) + '>'
+          + '<div class=' + String.fromCharCode(34) + 'kpi-name' + String.fromCharCode(34) + '>' + (k.nome||'?') + '</div>'
+          + '<div class=' + String.fromCharCode(34) + 'kpi-meta' + String.fromCharCode(34) + '>Meta: ' + fmtMeta(k) + (k.periodicidade?' · '+k.periodicidade:'') + '</div>'
+          + '</div>'
+          + '<div class=' + String.fromCharCode(34) + 'kpi-val' + String.fromCharCode(34) + ' style=' + String.fromCharCode(34) + 'color:' + statusColor(s) + String.fromCharCode(34) + '>'
+          + '<div class=' + String.fromCharCode(34) + 'num' + String.fromCharCode(34) + '>' + fmtVal(v, k.unit) + '</div>'
+          + '<div class=' + String.fromCharCode(34) + 'lbl' + String.fromCharCode(34) + '>' + statusLabel(s) + '</div>'
+          + '</div></div>';
+      });
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  html += '<div class=' + String.fromCharCode(34) + 'footer' + String.fromCharCode(34) + '>SOPRA · GESTÃO ESTRATÉGICA · Documento gerado em ' + today + '</div>'
+    + '</body></html>';
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+
 
 
 function nav(page,el){
