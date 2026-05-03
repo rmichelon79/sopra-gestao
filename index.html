@@ -4683,7 +4683,7 @@ function abrirMapaKpis(){
     'BORORO':  {bg:'#D85A30', ink:'#fff'}
   };
   const empColor = (e)=> empColors[e] || {bg:'#888780', ink:'#fff'};
-  const lastVal = (k)=> (k.history && k.history.length) ? (k.history[k.history.length-1].val ?? k.history[k.history.length-1].pct) : null;
+  const lastVal = (k)=> (k.history && k.history.length) ? (k.history[k.history.length-1].val ?? k.history[k.history.length-1].pct) : (typeof k.real === "number" ? k.real : null);
   const statusOf = (k)=>{
     const v = lastVal(k);
     if(v === null || v === undefined) return 'gray';
@@ -4765,7 +4765,7 @@ function abrirMapaKpis(){
       + '</div><div class=' + String.fromCharCode(34) + 'areas-grid' + String.fromCharCode(34) + '>';
     const areas = Object.keys(empAreas).sort();
     areas.forEach(area=>{
-      const list = empAreas[area].slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+      const list = empAreas[area].slice().sort((a,b)=>(a.ind||'').localeCompare(b.ind||''));
       html += '<div class=' + String.fromCharCode(34) + 'area-card' + String.fromCharCode(34) + '>'
         + '<div class=' + String.fromCharCode(34) + 'area-name' + String.fromCharCode(34) + '>' + area + ' · ' + list.length + '</div>';
       list.forEach(k=>{
@@ -4774,7 +4774,7 @@ function abrirMapaKpis(){
         html += '<div class=' + String.fromCharCode(34) + 'kpi-row' + String.fromCharCode(34) + '>'
           + '<div class=' + String.fromCharCode(34) + 'kpi-status' + String.fromCharCode(34) + ' style=' + String.fromCharCode(34) + 'background:' + statusColor(s) + String.fromCharCode(34) + '></div>'
           + '<div class=' + String.fromCharCode(34) + 'kpi-info' + String.fromCharCode(34) + '>'
-          + '<div class=' + String.fromCharCode(34) + 'kpi-name' + String.fromCharCode(34) + '>' + (k.nome||'?') + '</div>'
+          + '<div class=' + String.fromCharCode(34) + 'kpi-name' + String.fromCharCode(34) + '>' + (k.ind||'?') + '</div>'
           + '<div class=' + String.fromCharCode(34) + 'kpi-meta' + String.fromCharCode(34) + '>Meta: ' + fmtMeta(k) + (k.periodicidade?' · '+k.periodicidade:'') + '</div>'
           + '</div>'
           + '<div class=' + String.fromCharCode(34) + 'kpi-val' + String.fromCharCode(34) + ' style=' + String.fromCharCode(34) + 'color:' + statusColor(s) + String.fromCharCode(34) + '>'
