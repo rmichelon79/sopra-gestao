@@ -359,7 +359,15 @@ function loadUsers(){
   }catch(e){console.log('loadUsers fallback:',e);}
   return JSON.parse(JSON.stringify(DEFAULT_USERS));
 }
-function saveUsers(u){try{localStorage.setItem(USERS_KEY,JSON.stringify(u))}catch{}}
+function saveUsers(u){
+  USERS = u;
+  try{localStorage.setItem(USERS_KEY, JSON.stringify(u))}catch{}
+  // Also persist to Supabase so logins work across devices
+  if(typeof D !== 'undefined' && D){
+    D.usuarios = u;
+    if(typeof saveData === 'function') saveData();
+  }
+}
 let USERS=loadUsers();let SESSION=null;
 function doLogin(){
   // Reload users fresh in case localStorage had stale data
@@ -843,7 +851,7 @@ async function sbInit(){
   document.body.appendChild(syncMsg);
   const remote=await sbLoad();
   if(remote){
-    D=remote;
+    D=remote;if(D.usuarios&&D.usuarios.length){USERS=D.usuarios;try{localStorage.setItem(USERS_KEY,JSON.stringify(USERS))}catch{}}
     try{localStorage.setItem(DATA_KEY,JSON.stringify(D));}catch(e){}
     // Re-render only if app is visible (user already logged in)
     if(document.getElementById('app')&&document.getElementById('app').classList.contains('visible')){
@@ -3754,7 +3762,7 @@ function sbSync(){
   toast('Sincronizando…');
   sbLoad().then(remote=>{
     if(remote){
-      D=remote;
+      D=remote;if(D.usuarios&&D.usuarios.length){USERS=D.usuarios;try{localStorage.setItem(USERS_KEY,JSON.stringify(USERS))}catch{}}
       try{localStorage.setItem(DATA_KEY,JSON.stringify(D));}catch(e){}
       // Re-render current active page
       const active=document.querySelector('.page.active');
