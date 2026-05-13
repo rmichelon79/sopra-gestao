@@ -2726,6 +2726,13 @@ function toggleMetaB(){
           </select>
           ${isCustom?'':'<div style="font-size:10px;color:var(--fa);margin-top:4px">Tipo dos documentos padrão não pode ser alterado</div>'}
         </div>
+      </div>
+      <div class="fr"><label class="fl">Restrição de acesso</label>
+        <select class="fi fsel" id="etd-tag">
+          <option value=""${(!doc.tags||!doc.tags.length)?' selected':''}>Público — todos os usuários</option>
+          <option value="financeiro"${(doc.tags||[]).includes('financeiro')?' selected':''}>🔒 Financeiro — somente usuários com acesso financeiro</option>
+        </select>
+        <div style="font-size:10px;color:var(--fa);margin-top:4px">Define quem pode ver este documento. Admin sempre vê tudo.</div>
       </div>`;
     let footer=`<button class="btn" onclick="closeModal()">Cancelar</button>`;
     if(isCustom){
@@ -2874,12 +2881,19 @@ function toggleMetaB(){
       <div class="g2f"><div class="fr"><label class="fl">Iniciais</label><input class="fi" id="f-ini" maxlength="2"></div>
       <div class="fr"><label class="fl">Perfil</label>
         <select class="fi fsel" id="f-role"><option value="viewer">Visualizador</option><option value="gestor">Gestor</option><option value="admin">Administrador</option></select>
-      </div></div>`;
+      </div></div>
+      <div class="fr"><label class="fl">Acessos especiais</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:6px 0">
+          <input type="checkbox" id="f-acesso-fin" style="width:16px;height:16px">
+          🔒 Pode acessar documentos financeiros
+        </label>
+      </div>`;
     ft.innerHTML=cancel+save('saveNewUser()','Criar');
   }
   else if(type==='editUser'){
     const u=USERS.find(x=>x.id===id);
     document.getElementById('modal-title').textContent=`Editar — ${u.name}`;
+    const acessos = u.acesso || [];
     body.innerHTML=`<div class="g2f"><div class="fr"><label class="fl">Nome</label><input class="fi" id="f-nome" value="${u.name}"></div>
       <div class="fr"><label class="fl">Área</label><input class="fi" id="f-area" value="${u.area}"></div></div>
       <div class="g2f"><div class="fr"><label class="fl">Login</label><input class="fi" id="f-login" value="${u.username}"></div>
@@ -2891,7 +2905,13 @@ function toggleMetaB(){
           <option value="gestor"${u.role==='gestor'?' selected':''}>Gestor</option>
           <option value="admin"${u.role==='admin'?' selected':''}>Administrador</option>
         </select>
-      </div></div>`;
+      </div></div>
+      <div class="fr"><label class="fl">Acessos especiais</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:6px 0">
+          <input type="checkbox" id="f-acesso-fin" style="width:16px;height:16px"${acessos.includes('financeiro')?' checked':''}>
+          🔒 Pode acessar documentos financeiros
+        </label>
+      </div>`;
     ft.innerHTML=`${SESSION&&id!==SESSION.id?`<button class="btn btn-d" onclick="deleteUser('${id}');closeModal()">Apagar</button>`:''}`+cancel+save(`saveEditUser('${id}')`);
   }
 }
@@ -3309,12 +3329,15 @@ function saveNewUser(){
   if(!nome||!login||!pass){alert('Preencha todos os campos');return;}
   if(pass.length<6){alert('Senha deve ter ao menos 6 caracteres');return;}
   if(USERS.find(u=>u.username.toLowerCase()===login.toLowerCase())){alert('Usuário já existe');return;}
-  USERS.push({id:uid(),name:nome,username:login,password:pass,role:v('f-role'),initials:(v('f-ini')||nome.slice(0,2)).toUpperCase(),area:v('f-area')});
+  const acessoFin = document.getElementById('f-acesso-fin')?.checked;
+  USERS.push({id:uid(),name:nome,username:login,password:pass,role:v('f-role'),initials:(v('f-ini')||nome.slice(0,2)).toUpperCase(),area:v('f-area'),acesso: acessoFin ? ['financeiro'] : []});
   saveUsers(USERS);closeModal();renderUsuarios();toast('Usuário criado');
 }
 function saveEditUser(id){
   const u=USERS.find(x=>x.id===id);if(!u)return;
   u.name=v('f-nome');u.area=v('f-area');u.username=v('f-login');u.initials=(v('f-ini')||u.name.slice(0,2)).toUpperCase();u.role=v('f-role');
+  const acessoFin = document.getElementById('f-acesso-fin')?.checked;
+  u.acesso = acessoFin ? ['financeiro'] : [];
   const np=v('f-pass');if(np){if(np.length<6){alert('Senha deve ter ao menos 6 caracteres');return;}u.password=np;}
   saveUsers(USERS);closeModal();renderUsuarios();
   if(u.id===SESSION.id){SESSION=u;document.getElementById('sb-uname').textContent=u.name;document.getElementById('sb-av').textContent=u.initials;document.getElementById('sb-urole').textContent=roleLabel(u.role);}
@@ -3443,6 +3466,16 @@ function gerarDatasParaCadencia(cad,inicio,fim){
 }
 
 // ── DOCUMENTOS ────────────────────────────────────────────────────────────
+function userHasAccess(doc){
+  // Admin sees everything
+  if(SESSION && SESSION.role === 'admin') return true;
+  // No tags = public, visible to everyone
+  if(!doc.tags || !doc.tags.length) return true;
+  // Check if user has at least one matching access tag
+  const userAccess = (SESSION && SESSION.acesso) || [];
+  return doc.tags.some(tag => userAccess.includes(tag));
+}
+
 function renderDocs(){
   // Refresh docs from server in background to avoid stale cache (especially for non-admin users)
   // Skip if there are recent local deletions (to avoid restoring them before save completes)
@@ -3488,6 +3521,7 @@ function renderDocs(){
   </div>`;
 
   D.docs.forEach(doc=>{
+    if(!userHasAccess(doc)) return; // Skip restricted documents
     const e=doc.entradas||{};
     h+=`<div class="card-bare" style="margin-bottom:16px;padding:0;overflow:hidden">
       <!-- Header do documento -->
@@ -4518,6 +4552,8 @@ function salvarEdicaoTipoDoc(docId){
   const desc=document.getElementById('etd-desc')?.value?.trim()||'';
   const icone=document.getElementById('etd-icone')?.value?.trim()||'📁';
   const tipo=document.getElementById('etd-tipo')?.value||doc.tipo;
+  const tag=document.getElementById('etd-tag')?.value||'';
+  doc.tags = tag ? [tag] : [];
   doc.nome=nome;
   doc.desc=desc;
   doc.icone=icone;
