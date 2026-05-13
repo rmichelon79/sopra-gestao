@@ -369,20 +369,39 @@ function saveUsers(u){
   }
 }
 let USERS=loadUsers();let SESSION=null;
-function doLogin(){
-  // Reload users fresh in case localStorage had stale data
-  USERS=loadUsers();
+async function doLogin(){
   const u=document.getElementById('l-user').value.trim().toLowerCase();
   const p=document.getElementById('l-pass').value;
-  const f=USERS.find(x=>x.username.toLowerCase()===u&&x.password===p);
+  const errEl=document.getElementById('l-err');
+  const btnEl=document.querySelector('#login-screen .btn');
+  // Always try to fetch latest users from Supabase before validating
+  // This ensures password changes propagate across devices
+  if(typeof SB_URL!=='undefined' && SB_URL){
+    try{
+      if(btnEl){btnEl.textContent='Conectando...';btnEl.disabled=true;}
+      const res=await fetch(SB_URL+'/rest/v1/dados?id=eq.sopra&select=payload',{
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+      });
+      if(res.ok){
+        const rows=await res.json();
+        if(rows && rows.length && rows[0].payload && Array.isArray(rows[0].payload.usuarios) && rows[0].payload.usuarios.length){
+          USERS=rows[0].payload.usuarios;
+          try{localStorage.setItem(USERS_KEY,JSON.stringify(USERS))}catch{}
+        }
+      }
+    }catch(e){console.warn('Could not refresh users from server, using local cache:',e);}
+    if(btnEl){btnEl.textContent='Entrar';btnEl.disabled=false;}
+  }
+  // Fallback to local cache if server fetch failed or empty
+  if(!USERS || !USERS.length) USERS=loadUsers();
+  const f=USERS.find(x=>x.username && x.username.toLowerCase()===u && x.password===p);
   if(!f){
-    document.getElementById('l-err').style.display='block';
+    errEl.style.display='block';
     document.getElementById('l-pass').value='';
     return;
   }
   SESSION=f;
-  document.getElementById('l-err').style.display='none';
-  // Save session — wrapped so file:// restriction doesn't break login
+  errEl.style.display='none';
   try{localStorage.setItem(SESSION_KEY,JSON.stringify({id:f.id,ts:Date.now()}))}catch(e){console.log('Session not persisted:',e);}
   startApp();
 }
