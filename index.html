@@ -5,6 +5,7 @@
 <title>Sopra — Gestão Estratégica</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#F7F5F0;--sf:#FFF;--s2:#F0EDE6;--s3:#E8E4DC;--bd:rgba(0,0,0,.07);--bd2:rgba(0,0,0,.14);--tx:#1A1916;--mu:#6B6860;--fa:#A8A59E;--pu:#4A3F9F;--pul:#EEEDFE;--pum:#7F77DD;--te:#0F6E56;--tel:#E1F5EE;--tem:#1D9E75;--am:#854F0B;--aml:#FAEEDA;--amm:#EF9F27;--re:#A32D2D;--rel:#FCEBEB;--rem:#E24B4A;--pk:#72243E;--pkl:#FBEAF0;--pkm:#D4537E;--r:10px;--rl:16px;--sb:224px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -257,8 +258,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
   <div class="lb">
     <img src="data:image/jpeg;base64,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tHdZp3U5cRG6IAOy0t5571RP1We0bZs25NlvNjhDawDenp2DAm7XNH6Xv8edmIoMoRSz0dSyaJ74Z4XZa5pw5jh7ir22fbQodTQNt9wcyK6Rt8BOB+c3v7R5ju92pNnOn9SzOqpoX0tW7509OQ0vP6wIIPjz71G49idLDK2WG/1Ub2O3mObEAWkciDnmqLPXwrayC30M9ZUv3IYIzI93YAMlfCz0VXb7eymrLjJcJWH8PIwNcR1A45+K8mqbA7U1lfa/u19JHK5pkcxm8XAcd3n249SghOzOim1BfbprO4sy6eQxU4cM7vbjwG60easzoo/6tvqXkstpp7FZ6W2Uv4KmjDQTzcesnvJyfNe5B+Oij/q2+pfialp54XwywsfHI0tc0jgQeBC+yIMwamskmntQ1lrkyRDIejcfzmHi0+ohW1sd1AbhYJbRM/M1vdmPPMxuzj1HI8wurrLZ3RavroKx9W+kmijMbnMYHb4zkZ49XH1ry6W2ZR6VvbLnTXiaUhjmPidCAHtPUTntwfJUTpERQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQf/Z" alt="Sopra" style="height:60px;width:auto;display:block;margin:0 auto 16px">
     <div class="sub" style="text-align:center;margin-bottom:16px">Gestão Estratégica</div>
-    <label class="ll">Usuário</label>
-    <input class="li" id="l-user" type="text" placeholder="seu.nome" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
+    <label class="ll">E-mail</label>
+    <input class="li" id="l-user" type="email" placeholder="seu.nome@sopraincorporadora.com.br" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
     <label class="ll">Senha</label>
     <input class="li" id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     <div class="lerr" id="l-err">Usuário ou senha incorretos.</div>
@@ -340,6 +341,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
 const USERS_KEY='sopra-users-v2',SESSION_KEY='sopra-sess-v2',DATA_KEY='sopra-data-v14';
 const SB_URL='https://cgnuelmiacweybmvlbcm.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnbnVlbG1pYWN3ZXlibXZsYmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMDM0ODMsImV4cCI6MjA5Mjc3OTQ4M30.l02F-jt6CSgZf7wd5Dz0IY6jB9gCLzM6Iny7EsZLNSw';
+const SBC=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 let SB_ONLINE=false; // will be set true after first successful sync
 const DEFAULT_USERS=[
   {id:'u1',name:'Ricardo Michelon',username:'ricardo',password:'sopra2026',role:'admin',initials:'RM',area:'Diretoria'},
@@ -369,60 +371,52 @@ function saveUsers(u){
   }
 }
 let USERS=loadUsers();let SESSION=null;
+function _initialsFrom(n){return (n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';}
+
+// Constrói SESSION a partir de profiles + app_access (login único da plataforma)
+async function loadSession(user){
+  try{
+    const [{data:prof},{data:acc}]=await Promise.all([
+      SBC.from('profiles').select('nome,role').eq('id',user.id).maybeSingle(),
+      SBC.from('app_access').select('can_view,can_edit').eq('app','gestao').maybeSingle()
+    ]);
+    const role=(prof&&prof.role)||'viewer';
+    const isAdmin=role==='admin';
+    const canView=isAdmin||(acc&&acc.can_view===true);
+    if(!canView)return false;
+    const nome=(prof&&prof.nome)||user.email;
+    SESSION={id:user.id,name:nome,email:user.email,role,initials:_initialsFrom(nome),canEdit:isAdmin||(acc&&acc.can_edit===true)};
+    return true;
+  }catch(e){console.warn('loadSession error:',e);return false;}
+}
+
 async function doLogin(){
-  const u=document.getElementById('l-user').value.trim().toLowerCase();
+  const email=document.getElementById('l-user').value.trim().toLowerCase();
   const p=document.getElementById('l-pass').value;
   const errEl=document.getElementById('l-err');
-  const btnEl=document.querySelector('#login-screen .btn');
-  // Always try to fetch latest users from Supabase before validating
-  // This ensures password changes propagate across devices
-  if(typeof SB_URL!=='undefined' && SB_URL){
-    try{
-      if(btnEl){btnEl.textContent='Conectando...';btnEl.disabled=true;}
-      const res=await fetch(SB_URL+'/rest/v1/dados?id=eq.sopra&select=payload',{
-        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
-      });
-      if(res.ok){
-        const rows=await res.json();
-        if(rows && rows.length && rows[0].payload && Array.isArray(rows[0].payload.usuarios) && rows[0].payload.usuarios.length){
-          USERS=rows[0].payload.usuarios;
-          try{localStorage.setItem(USERS_KEY,JSON.stringify(USERS))}catch{}
-        }
-      }
-    }catch(e){console.warn('Could not refresh users from server, using local cache:',e);}
-    if(btnEl){btnEl.textContent='Entrar';btnEl.disabled=false;}
-  }
-  // Fallback to local cache if server fetch failed or empty
-  if(!USERS || !USERS.length) USERS=loadUsers();
-  const f=USERS.find(x=>x.username && x.username.toLowerCase()===u && x.password===p);
-  if(!f){
-    errEl.style.display='block';
-    document.getElementById('l-pass').value='';
-    return;
-  }
-  SESSION=f;
+  const btnEl=document.querySelector('#login-screen .lbtn');
   errEl.style.display='none';
-  try{localStorage.setItem(SESSION_KEY,JSON.stringify({id:f.id,ts:Date.now()}))}catch(e){console.log('Session not persisted:',e);}
+  if(btnEl){btnEl.textContent='Conectando...';btnEl.disabled=true;}
+  const {data,error}=await SBC.auth.signInWithPassword({email,password:p});
+  if(btnEl){btnEl.textContent='Entrar';btnEl.disabled=false;}
+  if(error){errEl.textContent='E-mail ou senha incorretos.';errEl.style.display='block';document.getElementById('l-pass').value='';return;}
+  const ok=await loadSession(data.user);
+  if(!ok){errEl.textContent='Você não tem acesso ao módulo de Gestão.';errEl.style.display='block';await SBC.auth.signOut();return;}
+  errEl.style.display='none';
   startApp();
 }
-function doLogout(){
+async function doLogout(){
+  try{await SBC.auth.signOut();}catch(e){}
   SESSION=null;
-  try{localStorage.removeItem(SESSION_KEY)}catch{}
   document.getElementById('app').classList.remove('visible');
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('l-user').value='';
   document.getElementById('l-pass').value='';
 }
-function tryAutoLogin(){
+async function tryAutoLogin(){
   try{
-    const raw=localStorage.getItem(SESSION_KEY);
-    if(!raw)return false;
-    const s=JSON.parse(raw);
-    if(s&&Date.now()-s.ts<8*3600*1000){
-      USERS=loadUsers();
-      const f=USERS.find(u=>u.id===s.id);
-      if(f){SESSION=f;return true;}
-    }
+    const {data:{session}}=await SBC.auth.getSession();
+    if(session&&session.user){return await loadSession(session.user);}
   }catch(e){console.log('Auto-login failed:',e);}
   return false;
 }
@@ -442,7 +436,7 @@ function startApp(){
   sbInit();
 }
 function roleLabel(r){return{admin:'Administrador',gestor:'Gestor',viewer:'Visualizador'}[r]||r}
-function can(a){if(SESSION.role==='admin')return true;if((a==='comment'||a==='edit')&&SESSION.role==='gestor')return true;return a==='view';}
+function can(a){if(SESSION.role==='admin')return true;if((a==='comment'||a==='edit')&&SESSION.canEdit)return true;return a==='view';}
 
 // ── DATA ─────────────────────────────────────────────────────────────────
 const DEFAULTS={
@@ -789,11 +783,13 @@ function saveData(){
 }
 
 async function sbFetch(path,opts={}){
+  let token=SB_KEY;
+  try{const {data:{session}}=await SBC.auth.getSession();if(session&&session.access_token)token=session.access_token;}catch(e){}
   const res=await fetch(SB_URL+path,{
     ...opts,
     headers:{
       'apikey':SB_KEY,
-      'Authorization':'Bearer '+SB_KEY,
+      'Authorization':'Bearer '+token,
       'Content-Type':'application/json',
       ...(opts.headers||{})
     }
@@ -4863,13 +4859,15 @@ function nav(page,el){
 
 // ── INIT ─────────────────────────────────────────────────────────────────
 // Init
-console.log('Sopra app starting. USERS:', USERS.length, 'records');
-if(tryAutoLogin()){
-  console.log('Auto-login OK:', SESSION.name);
-  startApp();
-} else {
-  console.log('No session — showing login screen');
-}
+console.log('Sopra app starting (login único Supabase Auth).');
+(async()=>{
+  if(await tryAutoLogin()){
+    console.log('Auto-login OK:', SESSION.name);
+    startApp();
+  } else {
+    console.log('No session — showing login screen');
+  }
+})();
 </script>
 </body>
 </html>
