@@ -872,6 +872,7 @@ async function sbInit(){
   syncMsg.textContent='Sincronizando…';
   document.body.appendChild(syncMsg);
   const remote=await sbLoad();
+  await loadCanonEmps();   // registry canônico de empreendimentos (Fase C)
   if(remote){
     D=remote;if(D.usuarios&&D.usuarios.length){USERS=D.usuarios;try{localStorage.setItem(USERS_KEY,JSON.stringify(USERS))}catch{}}
     try{localStorage.setItem(DATA_KEY,JSON.stringify(D));}catch(e){}
@@ -1035,7 +1036,7 @@ function renderDashboard(){
   h+=`<div class="g4" style="margin-bottom:22px">
     <div class="metric"><div class="m-l">Objetivos no ritmo</div><div class="m-v">${okOkrs}<small>de ${D.objetivos.length}</small></div></div>
     <div class="metric"><div class="m-l">KRs em risco</div><div class="m-v" style="color:${riskKrs>0?'#E24B4A':'inherit'}">${riskKrs}<small>de ${totalKrs}</small></div></div>
-    <div class="metric"><div class="m-l">Empreendimentos</div><div class="m-v">${D.empreendimentos.length}<small>ativos</small></div></div>
+    <div class="metric"><div class="m-l">Empreendimentos</div><div class="m-v">${empsAtivos().length}<small>ativos</small></div></div>
     <div class="metric"><div class="m-l">Próximo ritual</div><div class="m-v" style="font-size:16px">${nextRit?nextRit.data+' '+nextRit.mes:'—'}<small>${nextRit?nextRit.tipo:''}</small></div></div>
   </div><div style="display:flex;flex-direction:column;gap:20px">`;
   h+=`<div><div class="slbl" style="margin-top:0">Objetivos institucionais</div><div class="card-bare">`;
@@ -1410,12 +1411,38 @@ function renderKpis(){
 function deleteKpi(id){if(!confirm('Apagar KPI?'))return;D.kpis=D.kpis.filter(k=>k.id!==id);saveData();renderKpis();toast('KPI apagado');}
 
 // ── EMPREENDIMENTOS ───────────────────────────────────────────────────────
+// ── EMPREENDIMENTOS CANÔNICOS (registry vindo da plataforma) ──────────────
+let EMPS_CANON=[];
+function _normEmp(s){return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toUpperCase();}
+async function loadCanonEmps(){
+  try{
+    const r=await sbFetch('/rest/v1/empreendimentos?select=id,codigo,nome,status,ano_base&order=codigo');
+    if(r.ok){ EMPS_CANON=await r.json(); reconcileEmps(); }
+  }catch(e){console.warn('loadCanonEmps:',e);}
+}
+// Reconcilia D.empreendimentos com o registry canônico: id estabilizado no código,
+// nome/status do canônico mandam; cronograma (fases/marcos/timeline) preservado.
+function reconcileEmps(){
+  if(!EMPS_CANON.length) return;
+  D.empreendimentos = D.empreendimentos || [];
+  const byCode={};
+  D.empreendimentos.forEach(e=>{ const c=e.codigo||_normEmp(e.nome); if(c) byCode[c]=e; });
+  EMPS_CANON.forEach(c=>{
+    let e=byCode[c.codigo];
+    if(!e){ e={id:c.codigo,codigo:c.codigo,tipo:'',status:'gray',statusLabel:'',startDate:new Date().toISOString().slice(0,10),duracaoMeses:24,fases:[],marcos:[]}; D.empreendimentos.push(e); byCode[c.codigo]=e; }
+    e.codigo=c.codigo; e.id=c.codigo; e.nome=c.nome; e.canonId=c.id; e.canonStatus=c.status;
+  });
+}
+function empsAtivos(){ reconcileEmps(); return (D.empreendimentos||[]).filter(e=>e.canonStatus==='ativo'); }
+function kpiEmpCodes(){ const cs=EMPS_CANON.map(e=>e.codigo); return cs.length?cs:['SOPRA','ARIA','ALTANA','BORORO']; }
+
 function renderEmps(){
   const ce=can('edit');
   let h=`<div class="ph"><div class="ph-l"><div class="title">Empreendimentos</div><div class="sub">Cronogramas com data de início, duração, fases e % de conclusão</div></div>
-    <div class="ph-r">${ce?`<button class="btn btn-p btn-sm" onclick="openModal('addEmp')">+ Novo</button>`:''}
-    <button class="btn btn-ex btn-sm" onclick="exportPDF('emp')">↓ PDF</button></div></div>`;
-  D.empreendimentos.forEach(e=>{
+    <div class="ph-r"><button class="btn btn-ex btn-sm" onclick="exportPDF('emp')">↓ PDF</button></div></div>`;
+  const _ativos=empsAtivos();
+  if(!_ativos.length) h+=`<div style="text-align:center;padding:50px;color:var(--mu)"><div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--tx);margin-bottom:6px">Nenhum empreendimento ativo</div><p>O cadastro é feito no Portal. Empreendimentos com status <b>ativo</b> aparecem aqui.</p></div>`;
+  _ativos.forEach(e=>{
     const ncols=e.duracaoMeses||18;
     const st=e.status||'gray';
     // overall pct
@@ -1438,7 +1465,7 @@ function renderEmps(){
           ${ce?`<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
             <button class="btn btn-sm btn-gh" onclick="openModal('editEmp','${e.id}')">Editar</button>
             <button class="btn btn-sm" onclick="openModal('editEmpFases','${e.id}')">Cronograma</button>
-            <button class="btn btn-sm btn-d" onclick="deleteEmp('${e.id}')">Apagar</button>
+            <!-- cadastro/exclusão de empreendimento agora é no Portal -->
           </div>`:''}
         </div>
       </div>
@@ -2196,7 +2223,7 @@ function toggleMetaB(){
     document.getElementById('modal-title').textContent='Novo KPI';
     body.innerHTML=`<div class="g2f">
         <div class="fr"><label class="fl">Empreendimento</label>
-          <select class="fi fsel" id="f-emp">${['SOPRA','ARIA','ALTANA','BORORO'].map(e=>`<option value="${e}">${e}</option>`).join('')}<option value="outro">+ Novo...</option></select>
+          <select class="fi fsel" id="f-emp">${kpiEmpCodes().map(e=>`<option value="${e}">${e}</option>`).join('')}<option value="outro">+ Novo...</option></select>
         </div>
         <div class="fr"><label class="fl">Área</label>
           <select class="fi fsel" id="f-akpi">${['Financeiro','RH','Incorporação','Obras','Marketing','Comercial','Relacionamento com Cliente','Suprimentos','Planejamento'].map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
@@ -2227,7 +2254,7 @@ function toggleMetaB(){
       </div></div>`:'';
     body.innerHTML=`<div class="g2f">
         <div class="fr"><label class="fl">Empreendimento</label>
-          <select class="fi fsel" id="f-emp">${['SOPRA','ARIA','ALTANA','BORORO'].map(e=>`<option value="${e}"${(k.empreendimento||'SOPRA')===e?' selected':''}>${e}</option>`).join('')}</select>
+          <select class="fi fsel" id="f-emp">${kpiEmpCodes().map(e=>`<option value="${e}"${(k.empreendimento||'SOPRA')===e?' selected':''}>${e}</option>`).join('')}</select>
         </div>
         <div class="fr"><label class="fl">Área</label>
           <select class="fi fsel" id="f-akpi">${['Financeiro','RH','Incorporação','Obras','Marketing','Comercial','Relacionamento com Cliente','Suprimentos','Planejamento'].map(a=>`<option value="${a}"${(k.areaKpi||'Geral')===a?' selected':''}>${a}</option>`).join('')}</select>
@@ -2472,7 +2499,7 @@ function toggleMetaB(){
   else if(type==='editEmp'){
     const e=D.empreendimentos.find(x=>x.id===id);
     document.getElementById('modal-title').textContent=`Editar — ${e.nome}`;
-    body.innerHTML=`<div class="g2f"><div class="fr"><label class="fl">Nome</label><input class="fi" id="f-nome" value="${e.nome}"></div>
+    body.innerHTML=`<div class="g2f"><div class="fr"><label class="fl">Nome (cadastrado no Portal)</label><input class="fi" id="f-nome" value="${e.nome}" disabled style="opacity:.6"></div>
       <div class="fr"><label class="fl">Tipo</label><input class="fi" id="f-tipo" value="${e.tipo}"></div></div>
       <div class="g3f"><div class="fr"><label class="fl">Data de início</label><input class="fi" type="date" id="f-start" value="${e.startDate}"></div>
         <div class="fr"><label class="fl">Duração (meses)</label><input class="fi" type="number" id="f-dur" value="${e.duracaoMeses}" min="1" max="60"></div>
@@ -2486,7 +2513,7 @@ function toggleMetaB(){
           <option value="gray"${e.status==='gray'?' selected':''}>Planejamento</option>
         </select>
       </div>`;
-    ft.innerHTML=`<button class="btn btn-d" onclick="deleteEmp('${id}');closeModal()">Apagar</button>`+cancel+save(`saveEditEmp('${id}')`);
+    ft.innerHTML=cancel+save(`saveEditEmp('${id}')`);
   }
   else if(type==='editEmpFases'){
     const e=D.empreendimentos.find(x=>x.id===id);
@@ -3020,7 +3047,7 @@ function saveNewEmp(){
 }
 function saveEditEmp(id){
   const e=D.empreendimentos.find(x=>x.id===id);if(!e)return;
-  e.nome=v('f-nome');e.tipo=v('f-tipo');e.status=v('f-st');e.statusLabel=v('f-stlbl');e.startDate=v('f-start');e.duracaoMeses=parseInt(v('f-dur'))||e.duracaoMeses;
+  e.tipo=v('f-tipo');e.status=v('f-st');e.statusLabel=v('f-stlbl');e.startDate=v('f-start');e.duracaoMeses=parseInt(v('f-dur'))||e.duracaoMeses;
   saveData();closeModal();renderEmps();toast('Editado');
 }
 function saveEmpFases(id,nF,nM){
