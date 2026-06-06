@@ -308,10 +308,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
     </div>
     <div class="sb-ft">
   <div style="margin-bottom:8px">Ciclo atual <span style="font-family:'DM Mono',monospace">T2 · 2026</span></div>
-  <button class="btn btn-sm" style="width:100%;margin-bottom:5px;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);color:rgba(247,245,240,.7);font-size:11px" onclick="sbSync()">↺ Sincronizar</button>
-  <button class="btn btn-sm" style="width:100%;margin-bottom:5px;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);color:rgba(247,245,240,.7);font-size:11px" onclick="exportarJSON()">↓ Exportar dados</button>
-  <button class="btn btn-sm" style="width:100%;margin-bottom:5px;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);color:rgba(247,245,240,.7);font-size:11px" onclick="document.getElementById('importar-json-input').click()">↑ Importar dados</button>
-  <input type="file" id="importar-json-input" accept=".json" style="display:none" onchange="importarJSON(event)">
+  <!-- Backup/sync de dados agora ficam centralizados no Portal -->
   <button class="btn btn-sm" style="width:100%;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);color:rgba(247,245,240,.7);font-size:11px" onclick="exportarXLSX()">↓ Exportar Excel</button>
 </div>
   </nav>
