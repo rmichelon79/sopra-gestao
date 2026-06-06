@@ -404,11 +404,7 @@ async function doLogin(){
 }
 async function doLogout(){
   try{await SBC.auth.signOut();}catch(e){}
-  SESSION=null;
-  document.getElementById('app').classList.remove('visible');
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('l-user').value='';
-  document.getElementById('l-pass').value='';
+  window.location.href='https://rmichelon79.github.io/sopra-portal/';
 }
 async function tryAutoLogin(){
   try{
