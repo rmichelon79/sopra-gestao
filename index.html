@@ -372,7 +372,7 @@ function _initialsFrom(n){return (n||'?').trim().split(/\s+/).map(w=>w[0]).slice
 async function loadSession(user){
   try{
     const [{data:prof},{data:acc}]=await Promise.all([
-      SBC.from('profiles').select('nome,role').eq('id',user.id).maybeSingle(),
+      SBC.from('profiles').select('nome,role,fin_gestao').eq('id',user.id).maybeSingle(),
       SBC.from('app_access').select('can_view,can_edit').eq('app','gestao').maybeSingle()
     ]);
     const role=(prof&&prof.role)||'viewer';
@@ -380,7 +380,7 @@ async function loadSession(user){
     const canView=isAdmin||(acc&&acc.can_view===true);
     if(!canView)return false;
     const nome=(prof&&prof.nome)||user.email;
-    SESSION={id:user.id,name:nome,email:user.email,role,initials:_initialsFrom(nome),canEdit:isAdmin||(acc&&acc.can_edit===true)};
+    SESSION={id:user.id,name:nome,email:user.email,role,initials:_initialsFrom(nome),canEdit:isAdmin||(acc&&acc.can_edit===true),canFinanceiro:isAdmin||(prof&&prof.fin_gestao===true)};
     return true;
   }catch(e){console.warn('loadSession error:',e);return false;}
 }
@@ -3490,6 +3490,7 @@ function userHasAccess(doc){
   return doc.tags.some(tag => userAccess.includes(tag));
 }
 
+function setDocsTab(t){ window._docsTab=t; renderDocs(); }
 function renderDocs(){
   // Refresh docs from server in background to avoid stale cache (especially for non-admin users)
   // Skip if there are recent local deletions (to avoid restoring them before save completes)
@@ -3529,13 +3530,20 @@ function renderDocs(){
   const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const curYear=new Date().getFullYear();
 
+  const canFin=(SESSION.role==='admin')||SESSION.canFinanceiro;
+  const isFin=doc=>(doc.tags||[]).includes('financeiro');
+  let _tab=window._docsTab||'estrat';
+  if(_tab==='fin'&&!canFin)_tab='estrat';
+  const tabBtn=(id,label)=>`<button class="btn btn-sm ${_tab===id?'btn-p':'btn-gh'}" onclick="setDocsTab('${id}')">${label}</button>`;
   let h=`<div class="ph">
     <div class="ph-l"><div class="title">Documentos</div>
-    <div class="sub">Documentos estratégicos da empresa em PDF</div></div>
+    <div class="sub">${_tab==='fin'?'Documentos financeiros — acesso restrito':'Documentos estratégicos da empresa em PDF'}</div></div>
+    <div class="ph-r" style="display:flex;gap:6px">${tabBtn('estrat','Estratégia')}${canFin?tabBtn('fin','🔒 Financeiros'):''}</div>
   </div>`;
 
-  D.docs.forEach(doc=>{
-    if(!userHasAccess(doc)) return; // Skip restricted documents
+  const _docsToShow=(D.docs||[]).filter(doc=>_tab==='fin'?isFin(doc):!isFin(doc));
+  if(!_docsToShow.length){ h+=`<div style="text-align:center;padding:50px;color:var(--fa)">Nenhum documento ${_tab==='fin'?'financeiro':'de estratégia'} ainda.</div>`; }
+  _docsToShow.forEach(doc=>{
     const e=doc.entradas||{};
     h+=`<div class="card-bare" style="margin-bottom:16px;padding:0;overflow:hidden">
       <!-- Header do documento -->
