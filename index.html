@@ -3675,7 +3675,8 @@ function renderDocs(){
       h+=secH(E.nome);
       ds.forEach(d=>{ h+=renderDocCard(d,E.codigo); });
     });
-    const geralM=multiplos.filter(d=>hasEnt(d,en=>!_empMatch(en)));
+    // Geral: docs múltiplos vazios (recém-criados) OU com entradas sem empreendimento
+    const geralM=multiplos.filter(d=>{const arr=Array.isArray(d.entradas)?d.entradas:[];return arr.length===0||arr.some(en=>!_empMatch(en));});
     if(company.length||geralM.length){
       h+=secH('Geral / empresa');
       company.forEach(d=>{ h+=renderDocCard(d,''); });
