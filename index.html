@@ -3551,24 +3551,13 @@ function renderDocs(){
     <div class="ph-r" style="display:flex;gap:6px">${tabBtn('estrat','Estratégia')}${canFin?tabBtn('fin','🔒 Financeiros'):''}</div>
   </div>`;
 
-  // filtro por empreendimento (só na aba Estratégia)
-  const _empFilter=(_tab==='estrat')?(window._docsEmpFilter||''):'';
+  // casa entrada -> código de empreendimento (empCodigo novo; ou nome casado nos antigos)
   const _empMatch=(en)=>en.empCodigo||(function(l){const n=_normEmp(l);const m=EMPS_CANON.find(e=>e.codigo===n||_normEmp(e.nome)===n);return m?m.codigo:null;})(en.label||en.nome||'');
-  if(_tab==='estrat' && EMPS_CANON.length){
-    h+=`<div style="margin:0 0 12px;font-size:13px;color:var(--mu)">Empreendimento:
-      <select class="fi fsel" style="width:auto;display:inline-block;margin-left:6px" onchange="setDocsEmpFilter(this.value)">
-        <option value="">Todos</option>
-        ${EMPS_CANON.map(e=>`<option value="${e.codigo}"${_empFilter===e.codigo?' selected':''}>${e.nome}</option>`).join('')}
-      </select></div>`;
-  }
 
-  const _docsToShow=(D.docs||[]).filter(doc=>_tab==='fin'?isFin(doc):!isFin(doc));
-  if(!_docsToShow.length){ h+=`<div style="text-align:center;padding:50px;color:var(--fa)">Nenhum documento ${_tab==='fin'?'financeiro':'de estratégia'} ainda.</div>`; }
-  _docsToShow.forEach(doc=>{
-    // com filtro de empreendimento ativo, mostra só documentos por-empreendimento (múltiplo) que tenham entradas do empreendimento
-    if(_empFilter){ if(doc.tipo!=='multiplo') return; const _arr=(Array.isArray(doc.entradas)?doc.entradas:[]).filter(en=>_empMatch(en)===_empFilter); if(!_arr.length) return; }
+  // Card de um documento. empFilter: ''=todas as entradas; código=só do empreendimento; '__geral'=sem empreendimento
+  function renderDocCard(doc, empFilter){
     const e=doc.entradas||{};
-    h+=`<div class="card-bare" style="margin-bottom:16px;padding:0;overflow:hidden">
+    let h=`<div class="card-bare" style="margin-bottom:16px;padding:0;overflow:hidden">
       <!-- Header do documento -->
       <div style="padding:16px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--bd)">
         <div style="font-size:24px">${doc.icone}</div>
@@ -3641,7 +3630,9 @@ function renderDocs(){
     else if(doc.tipo==='multiplo'){
       // ── Metas: um PDF por empreendimento ──
       const lista=Array.isArray(e)?e:[];
-      const ents=lista.map((entry,i)=>({entry,i})).filter(x=>!_empFilter||_empMatch(x.entry)===_empFilter);
+      let ents=lista.map((entry,i)=>({entry,i}));
+      if(empFilter==='__geral') ents=ents.filter(x=>!_empMatch(x.entry));
+      else if(empFilter) ents=ents.filter(x=>_empMatch(x.entry)===empFilter);
       if(!ents.length){
         h+=`<div style="padding:20px 20px;color:var(--fa);font-size:13px">Nenhum documento ainda.</div>`;
       } else {
@@ -3662,7 +3653,36 @@ function renderDocs(){
     }
 
     h+=`</div>`;
-  });
+    return h;
+  }
+
+  if(_tab==='fin'){
+    const finDocs=(D.docs||[]).filter(isFin);
+    if(!finDocs.length) h+=`<div style="text-align:center;padding:50px;color:var(--fa)">Nenhum documento financeiro ainda.</div>`;
+    finDocs.forEach(doc=>{ h+=renderDocCard(doc,''); });
+  } else {
+    // Estratégia: empreendimento primeiro, depois tipo de documento
+    const estrat=(D.docs||[]).filter(doc=>!isFin(doc));
+    const multiplos=estrat.filter(d=>d.tipo==='multiplo');
+    const company=estrat.filter(d=>d.tipo!=='multiplo');
+    const hasEnt=(d,fn)=>(Array.isArray(d.entradas)?d.entradas:[]).some(fn);
+    const secH=(t)=>`<div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--tx);margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--bd2)">${t}</div>`;
+    let any=false;
+    EMPS_CANON.forEach(E=>{
+      const ds=multiplos.filter(d=>hasEnt(d,en=>_empMatch(en)===E.codigo));
+      if(!ds.length) return;
+      any=true;
+      h+=secH(E.nome);
+      ds.forEach(d=>{ h+=renderDocCard(d,E.codigo); });
+    });
+    const geralM=multiplos.filter(d=>hasEnt(d,en=>!_empMatch(en)));
+    if(company.length||geralM.length){
+      h+=secH('Geral / empresa');
+      company.forEach(d=>{ h+=renderDocCard(d,''); });
+      geralM.forEach(d=>{ h+=renderDocCard(d,'__geral'); });
+    }
+    if(!any && !company.length && !geralM.length) h+=`<div style="text-align:center;padding:50px;color:var(--fa)">Nenhum documento de estratégia ainda.</div>`;
+  }
 
   // Botão para adicionar novo tipo de documento (admin)
   if(ce){
