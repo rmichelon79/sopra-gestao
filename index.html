@@ -678,6 +678,11 @@ function migrateData(parsed){
     const old=oldDocs[id];
     const fresh={id,...schema,entradas:schema.tipo==='multiplo'?[]:{}};
     if(old){
+      // Preserve campos editáveis dos docs padrão (tag financeiro/estratégico, nome, desc, ícone)
+      if(old.tags) fresh.tags=old.tags;
+      if(old.nome) fresh.nome=old.nome;
+      if(old.desc) fresh.desc=old.desc;
+      if(old.icone) fresh.icone=old.icone;
       // Preserve PDFs from old format
       if(schema.tipo==='multiplo'){
         // Old could be array of entries with valores or with storageUrl
@@ -3519,6 +3524,7 @@ function renderDocs(){
           ld.nome = sd.nome;
           ld.icone = sd.icone;
           ld.desc = sd.desc;
+          ld.tags = sd.tags;
           changed = true;
         }
       });
