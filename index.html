@@ -615,9 +615,7 @@ const DEFAULTS={
   docs:[
     {id:'doc1',tipo:'anual',   nome:'Orçamento Empresarial',   icone:'💼',desc:'Um PDF por ano fiscal.',           entradas:{}},
     {id:'doc2',tipo:'mensal',  nome:'DRE Mensal',              icone:'📈',desc:'Demonstrativo de resultado — um PDF por mês.',entradas:{}},
-    {id:'doc3',tipo:'mensal',  nome:'Fluxo de Caixa Projetado',icone:'💸',desc:'Projeção de caixa — um PDF por mês.',         entradas:{}},
-    {id:'doc4',tipo:'multiplo',nome:'Metas Comerciais',        icone:'📊',desc:'Um PDF por empreendimento.',       entradas:[]},
-    {id:'doc5',tipo:'multiplo',nome:'Metas de Marketing',      icone:'📣',desc:'Um PDF por empreendimento.',       entradas:[]}
+    {id:'doc3',tipo:'mensal',  nome:'Fluxo de Caixa Projetado',icone:'💸',desc:'Projeção de caixa — um PDF por mês.',         entradas:{}}
   ],
   templateReunioes:[
     {id:'t1',nome:'1:1 Trimestral (Feedback SBI)',campos:[
@@ -665,15 +663,13 @@ function migrateData(parsed){
     doc1:{tipo:'anual',   nome:'Orçamento Empresarial',   icone:'💼',desc:'Um PDF por ano fiscal.'},
     doc2:{tipo:'mensal',  nome:'DRE Mensal',              icone:'📈',desc:'Demonstrativo de resultado — um PDF por mês.'},
     doc3:{tipo:'mensal',  nome:'Fluxo de Caixa Projetado',icone:'💸',desc:'Projeção de caixa — um PDF por mês.'},
-    doc4:{tipo:'multiplo',nome:'Metas Comerciais',        icone:'📊',desc:'Um PDF por empreendimento.'},
-    doc5:{tipo:'multiplo',nome:'Metas de Marketing',      icone:'📣',desc:'Um PDF por empreendimento.'},
   };
   if(!parsed.docs)parsed.docs=[];
   const oldDocs={};
   parsed.docs.forEach(d=>{oldDocs[d.id]=d;});
   // Rebuild docs in correct order
   const newDocs=[];
-  ['doc1','doc2','doc3','doc4','doc5'].forEach(id=>{
+  ['doc1','doc2','doc3'].forEach(id=>{
     const schema=DOC_SCHEMA[id];
     const old=oldDocs[id];
     const fresh={id,...schema,entradas:schema.tipo==='multiplo'?[]:{}};
