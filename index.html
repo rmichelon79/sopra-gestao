@@ -3508,10 +3508,11 @@ function renderDocs(){
       if(!rows || !rows.length) return;
       const serverDocs = rows[0].payload && rows[0].payload.docs;
       if(!serverDocs) return;
-      let changed = false;
+      let changed = false, _invalid = false;
+      const _valid = id => id==='doc1'||id==='doc2'||id==='doc3'||(id&&id.startsWith('docX'));
       serverDocs.forEach(sd=>{
         const ld = (D.docs||[]).find(x=>x.id===sd.id);
-        if(!ld){ D.docs.push(sd); changed=true; return; }
+        if(!ld){ if(_valid(sd.id)){ D.docs.push(sd); changed=true; } else { _invalid=true; } return; }
         const lE = JSON.stringify(ld.entradas);
         const sE = JSON.stringify(sd.entradas);
         if(lE !== sE){
@@ -3524,6 +3525,7 @@ function renderDocs(){
           changed = true;
         }
       });
+      if(_invalid && typeof saveData==='function') saveData();  // remove do servidor tipos descontinuados (ex: doc4/doc5)
       if(changed){
         try{localStorage.setItem(DATA_KEY,JSON.stringify(D));}catch(e){}
         renderDocs();
