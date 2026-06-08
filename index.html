@@ -2696,9 +2696,12 @@ function toggleMetaB(){
           ${[curYear-1,curYear,curYear+1].map(y=>`<option value="${y}">${y}</option>`).join('')}
         </select></div>`;
     } else if(doc.tipo==='multiplo'){
-      extraLabel=`<div class="fr"><label class="fl">Empreendimento / Label</label>
-        <input class="fi" id="ud-label" placeholder="ex: Aria, Bororó..." value="">
-      </div>`;
+      const _eo=(typeof EMPS_CANON!=='undefined'?EMPS_CANON:[]).map(em=>`<option value="${em.codigo}">${em.nome}</option>`).join('');
+      extraLabel=_eo
+        ? `<div class="fr"><label class="fl">Empreendimento</label>
+            <select class="fi fsel" id="ud-emp">${_eo}<option value="__geral">Geral / empresa</option></select></div>`
+        : `<div class="fr"><label class="fl">Empreendimento / Label</label>
+            <input class="fi" id="ud-label" placeholder="ex: Aria, Bororó..." value=""></div>`;
     } else if(doc.tipo==='mensal'){
       const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       const curYear=new Date().getFullYear();
@@ -3491,6 +3494,7 @@ function userHasAccess(doc){
 }
 
 function setDocsTab(t){ window._docsTab=t; renderDocs(); }
+function setDocsEmpFilter(v){ window._docsEmpFilter=v; renderDocs(); }
 function renderDocs(){
   // Refresh docs from server in background to avoid stale cache (especially for non-admin users)
   // Skip if there are recent local deletions (to avoid restoring them before save completes)
@@ -3541,9 +3545,22 @@ function renderDocs(){
     <div class="ph-r" style="display:flex;gap:6px">${tabBtn('estrat','Estratégia')}${canFin?tabBtn('fin','🔒 Financeiros'):''}</div>
   </div>`;
 
+  // filtro por empreendimento (só na aba Estratégia)
+  const _empFilter=(_tab==='estrat')?(window._docsEmpFilter||''):'';
+  const _empMatch=(en)=>en.empCodigo||(function(l){const n=_normEmp(l);const m=EMPS_CANON.find(e=>e.codigo===n||_normEmp(e.nome)===n);return m?m.codigo:null;})(en.label||en.nome||'');
+  if(_tab==='estrat' && EMPS_CANON.length){
+    h+=`<div style="margin:0 0 12px;font-size:13px;color:var(--mu)">Empreendimento:
+      <select class="fi fsel" style="width:auto;display:inline-block;margin-left:6px" onchange="setDocsEmpFilter(this.value)">
+        <option value="">Todos</option>
+        ${EMPS_CANON.map(e=>`<option value="${e.codigo}"${_empFilter===e.codigo?' selected':''}>${e.nome}</option>`).join('')}
+      </select></div>`;
+  }
+
   const _docsToShow=(D.docs||[]).filter(doc=>_tab==='fin'?isFin(doc):!isFin(doc));
   if(!_docsToShow.length){ h+=`<div style="text-align:center;padding:50px;color:var(--fa)">Nenhum documento ${_tab==='fin'?'financeiro':'de estratégia'} ainda.</div>`; }
   _docsToShow.forEach(doc=>{
+    // com filtro de empreendimento ativo, mostra só documentos por-empreendimento (múltiplo) que tenham entradas do empreendimento
+    if(_empFilter){ if(doc.tipo!=='multiplo') return; const _arr=(Array.isArray(doc.entradas)?doc.entradas:[]).filter(en=>_empMatch(en)===_empFilter); if(!_arr.length) return; }
     const e=doc.entradas||{};
     h+=`<div class="card-bare" style="margin-bottom:16px;padding:0;overflow:hidden">
       <!-- Header do documento -->
@@ -3618,11 +3635,12 @@ function renderDocs(){
     else if(doc.tipo==='multiplo'){
       // ── Metas: um PDF por empreendimento ──
       const lista=Array.isArray(e)?e:[];
-      if(!lista.length){
+      const ents=lista.map((entry,i)=>({entry,i})).filter(x=>!_empFilter||_empMatch(x.entry)===_empFilter);
+      if(!ents.length){
         h+=`<div style="padding:20px 20px;color:var(--fa);font-size:13px">Nenhum documento ainda.</div>`;
       } else {
         h+=`<div style="padding:8px 0">`;
-        lista.forEach((entry,i)=>{
+        ents.forEach(({entry,i})=>{
           h+=`<div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--bd2)">
             <div style="font-size:20px">📄</div>
             <div style="flex:1">
@@ -4474,12 +4492,19 @@ async function salvarUploadDoc(docId,key){
 
   // Collect form values BEFORE closing modal
   let useKey=key;
+  let empCodigo=null;
   if(doc.tipo==='anual'){
     const ano=document.getElementById('ud-ano')?.value||String(new Date().getFullYear());
     useKey=ano;
   } else if(doc.tipo==='multiplo'){
-    const label=document.getElementById('ud-label')?.value?.trim()||file.name.replace('.pdf','');
-    useKey=label;
+    const empSel=document.getElementById('ud-emp');
+    if(empSel){
+      const code=empSel.value;
+      if(code && code!=='__geral'){ const emp=(typeof EMPS_CANON!=='undefined'?EMPS_CANON:[]).find(e=>e.codigo===code); useKey=emp?emp.nome:code; empCodigo=code; }
+      else { useKey='Geral'; empCodigo=null; }
+    } else {
+      useKey=document.getElementById('ud-label')?.value?.trim()||file.name.replace('.pdf','');
+    }
   } else if(doc.tipo==='mensal'){
     const mes=document.getElementById('ud-mes')?.value;
     const yy=document.getElementById('ud-ano')?.value;
@@ -4506,7 +4531,7 @@ async function salvarUploadDoc(docId,key){
 
   if(doc.tipo==='multiplo'){
     if(!Array.isArray(doc.entradas))doc.entradas=[];
-    doc.entradas.push({...entry,label:useKey});
+    doc.entradas.push({...entry,label:useKey,empCodigo});
   } else {
     if(!doc.entradas||Array.isArray(doc.entradas))doc.entradas={};
     doc.entradas[useKey]=entry;
