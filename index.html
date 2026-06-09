@@ -3655,14 +3655,16 @@ function renderDocs(){
   }
 
   if(_tab==='fin'){
-    const finDocs=(D.docs||[]).filter(isFin);
+    const _byNome=(a,b)=>(a.nome||'').localeCompare(b.nome||'','pt',{sensitivity:'base'});
+    const finDocs=(D.docs||[]).filter(isFin).sort(_byNome);
     if(!finDocs.length) h+=`<div style="text-align:center;padding:50px;color:var(--fa)">Nenhum documento financeiro ainda.</div>`;
     finDocs.forEach(doc=>{ h+=renderDocCard(doc,''); });
   } else {
     // Estratégia: empreendimento primeiro, depois tipo de documento
     const estrat=(D.docs||[]).filter(doc=>!isFin(doc));
-    const multiplos=estrat.filter(d=>d.tipo==='multiplo');
-    const company=estrat.filter(d=>d.tipo!=='multiplo');
+    const _byNome=(a,b)=>(a.nome||'').localeCompare(b.nome||'','pt',{sensitivity:'base'});
+    const multiplos=estrat.filter(d=>d.tipo==='multiplo').sort(_byNome);
+    const company=estrat.filter(d=>d.tipo!=='multiplo').sort(_byNome);
     const hasEnt=(d,fn)=>(Array.isArray(d.entradas)?d.entradas:[]).some(fn);
     const secH=(t)=>`<div style="font-family:'DM Serif Display',serif;font-size:34px;line-height:1.15;color:var(--tx);margin:28px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--bd2)">${t}</div>`;
     let any=false;
