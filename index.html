@@ -3664,7 +3664,7 @@ function renderDocs(){
     const multiplos=estrat.filter(d=>d.tipo==='multiplo');
     const company=estrat.filter(d=>d.tipo!=='multiplo');
     const hasEnt=(d,fn)=>(Array.isArray(d.entradas)?d.entradas:[]).some(fn);
-    const secH=(t)=>`<div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--tx);margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--bd2)">${t}</div>`;
+    const secH=(t)=>`<div style="font-family:'DM Serif Display',serif;font-size:34px;line-height:1.15;color:var(--tx);margin:28px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--bd2)">${t}</div>`;
     let any=false;
     EMPS_CANON.forEach(E=>{
       const ds=multiplos.filter(d=>hasEnt(d,en=>_empMatch(en)===E.codigo));
