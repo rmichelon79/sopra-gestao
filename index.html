@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#F7F5F0;--sf:#FFF;--s2:#F0EDE6;--s3:#E8E4DC;--bd:rgba(0,0,0,.07);--bd2:rgba(0,0,0,.14);--tx:#1A1916;--mu:#6B6860;--fa:#A8A59E;--pu:#4A3F9F;--pul:#EEEDFE;--pum:#7F77DD;--te:#0F6E56;--tel:#E1F5EE;--tem:#1D9E75;--am:#854F0B;--aml:#FAEEDA;--amm:#EF9F27;--re:#A32D2D;--rel:#FCEBEB;--rem:#E24B4A;--pk:#72243E;--pkl:#FBEAF0;--pkm:#D4537E;--r:10px;--rl:16px;--sb:224px}
+:root{--bg:#F7F5F0;--sf:#FFF;--s2:#F0EDE6;--s3:#E8E4DC;--bd:rgba(0,0,0,.07);--bd2:rgba(0,0,0,.14);--tx:#1A1916;--mu:#6B6860;--fa:#A8A59E;--pu:#4A3F9F;--pul:#EEEDFE;--pum:#7F77DD;--te:#4C6B1B;--tel:#EEF1DD;--tem:#7AA436;--am:#854F0B;--aml:#FAEEDA;--amm:#EF9F27;--re:#A32D2D;--rel:#FCEBEB;--rem:#E24B4A;--pk:#72243E;--pkl:#FBEAF0;--pkm:#D4537E;--r:10px;--rl:16px;--sb:224px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.6;min-height:100vh}
 /* LOGIN */
@@ -288,7 +288,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
       <div class="nav-lbl">Visão</div>
       <button class="nav-it active" onclick="nav('dashboard',this)"><div class="nav-dot" style="background:#7F77DD"></div>Dashboard</button>
       <button class="nav-it" onclick="nav('okrs',this)"><div class="nav-dot" style="background:#D85A30"></div>OKRs 2026</button>
-      <button class="nav-it" onclick="nav('kpis',this)"><div class="nav-dot" style="background:#1D9E75"></div>KPIs operacionais</button>
+      <button class="nav-it" onclick="nav('kpis',this)"><div class="nav-dot" style="background:#7AA436"></div>KPIs operacionais</button>
     </div>
     <div class="nav-sec">
       <div class="nav-lbl">Operação</div>
@@ -305,7 +305,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
     <!-- "Usuários e acesso" removido — gestão de usuários é centralizada no Portal -->
     <div class="sb-ft">
   <div style="margin-bottom:8px">Ciclo atual <span style="font-family:'DM Mono',monospace">T2 · 2026</span></div>
-  <button class="btn btn-sm" style="width:100%;margin-bottom:6px;background:#1D9E75;border-color:#1D9E75;color:#fff;font-size:12px;font-weight:600" onclick="location.href='https://rmichelon79.github.io/sopra-portal/'">⌂ Voltar ao Portal</button>
+  <button class="btn btn-sm" style="width:100%;margin-bottom:6px;background:#7AA436;border-color:#7AA436;color:#22201B;font-size:12px;font-weight:600" onclick="location.href='https://rmichelon79.github.io/sopra-portal/'">⌂ Voltar ao Portal</button>
   <!-- Backup/sync de dados agora ficam centralizados no Portal -->
   <button class="btn btn-sm" style="width:100%;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);color:rgba(247,245,240,.7);font-size:11px" onclick="exportarXLSX()">↓ Exportar Excel</button>
 </div>
@@ -888,7 +888,7 @@ async function sbInit(){
 function showSyncStatus(online){
   const el=document.getElementById('sync-status');
   if(!el)return;
-  el.innerHTML=online?'<span style="color:#1D9E75">● Online</span>':'<span style="color:#EF9F27">● Local</span>';
+  el.innerHTML=online?'<span style="color:#5A7A1F">● Online</span>':'<span style="color:#EF9F27">● Local</span>';
 }
 let D=loadData();
 
@@ -924,13 +924,13 @@ function calcStatus(op,meta,real,metaB){
   return'gray';
 }
 
-function pcolor(s){return s==='ok'?'#1D9E75':s==='risk'?'#E24B4A':'#EF9F27'}
+function pcolor(s){return s==='ok'?'#7AA436':s==='risk'?'#E24B4A':'#EF9F27'}
 function pill(s,lbl){
   const mc={ok:'p-ok',warn:'p-w',risk:'p-r',gray:'p-g',w:'p-w',r:'p-r',g:'p-g'};
   const ml={ok:'No ritmo',warn:'Atenção',risk:'Em risco',gray:'Sem dados',w:'Atenção',r:'Em risco',g:'Sem dados'};
   return`<span class="pill ${mc[s]||'p-g'}">${lbl||ml[s]||s}</span>`;
 }
-function tagStyle(c){return{ok:'background:#E1F5EE;color:#085041',w:'background:#FAEEDA;color:#854F0B',r:'background:#FCEBEB;color:#A32D2D',g:'background:#F1EFE8;color:#5F5E5A'}[c]||'background:#F1EFE8;color:#5F5E5A'}
+function tagStyle(c){return{ok:'background:#EEF1DD;color:#4C6B1B',w:'background:#FAEEDA;color:#854F0B',r:'background:#FCEBEB;color:#A32D2D',g:'background:#F1EFE8;color:#5F5E5A'}[c]||'background:#F1EFE8;color:#5F5E5A'}
 function camadaColor(c){return['','var(--pum)','var(--tem)','var(--amm)','var(--pkm)'][c]||'var(--fa)'}
 function camadaLabel(c){return['','Estratégia','Performance','Projetos','Pessoas'][c]||''}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
