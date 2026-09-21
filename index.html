@@ -305,7 +305,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
     <!-- "Usuários e acesso" removido — gestão de usuários é centralizada no Portal -->
     <div class="sb-ft">
   <div style="margin-bottom:8px">Ciclo atual <span style="font-family:'DM Mono',monospace">T2 · 2026</span></div>
-  <button class="btn btn-sm" style="width:100%;margin-bottom:6px;background:#7AA436;border-color:#7AA436;color:#22201B;font-size:12px;font-weight:600" onclick="location.href='https://rmichelon79.github.io/sopra-portal/'">⌂ Voltar ao Portal</button>
+  <button class="btn btn-sm" style="width:100%;margin-bottom:6px;background:#7AA436;border-color:#7AA436;color:#22201B;font-size:12px;font-weight:600" onclick="location.href='https://portal.sopraincorporadora.com.br/'">⌂ Voltar ao Portal</button>
   <!-- Backup/sync de dados agora ficam centralizados no Portal -->
   <button class="btn btn-sm" style="width:100%;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);color:rgba(247,245,240,.7);font-size:11px" onclick="exportarXLSX()">↓ Exportar Excel</button>
 </div>
@@ -402,7 +402,7 @@ async function doLogin(){
 }
 async function doLogout(){
   try{await SBC.auth.signOut();}catch(e){}
-  window.location.href='https://rmichelon79.github.io/sopra-portal/';
+  window.location.href='https://portal.sopraincorporadora.com.br/';
 }
 async function tryAutoLogin(){
   try{
