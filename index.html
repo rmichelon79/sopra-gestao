@@ -287,7 +287,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
     <div class="nav-sec">
       <div class="nav-lbl">Visão</div>
       <button class="nav-it active" onclick="nav('dashboard',this)"><div class="nav-dot" style="background:#7F77DD"></div>Dashboard</button>
-      <button class="nav-it" onclick="nav('okrs',this)"><div class="nav-dot" style="background:#D85A30"></div>OKRs 2026</button>
       <button class="nav-it" onclick="nav('kpis',this)"><div class="nav-dot" style="background:#7AA436"></div>KPIs operacionais</button>
     </div>
     <div class="nav-sec">
@@ -1016,41 +1015,17 @@ function makeLineChart(canvasId,labels,datasets,title){
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────
 function renderDashboard(){
-  let okOkrs=0,riskKrs=0,totalKrs=0;
-  D.objetivos.forEach(o=>{
-    const avg=objAvg(o);
-    const hasRisk=o.areas.some(a=>a.krs.some(k=>krStatus(k)==='risk'));
-    if(!hasRisk&&avg!==null&&avg>=50)okOkrs++;
-    o.areas.forEach(a=>a.krs.forEach(k=>{totalKrs++;if(krStatus(k)==='risk')riskKrs++;}));
-  });
   const nextRit=D.rituais.find(r=>!r.done);
   let h=`<div class="ph"><div class="ph-l"><div class="title">Bom dia, ${SESSION.name.split(' ')[0]}.</div><div class="sub">T2 2026 · ${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div></div></div>`;
-  h+=`<div class="g4" style="margin-bottom:22px">
-    <div class="metric"><div class="m-l">Objetivos no ritmo</div><div class="m-v">${okOkrs}<small>de ${D.objetivos.length}</small></div></div>
-    <div class="metric"><div class="m-l">KRs em risco</div><div class="m-v" style="color:${riskKrs>0?'#E24B4A':'inherit'}">${riskKrs}<small>de ${totalKrs}</small></div></div>
+  h+=`<div class="g4" style="grid-template-columns:repeat(2,1fr);margin-bottom:22px">
     <div class="metric"><div class="m-l">Empreendimentos</div><div class="m-v">${empsAtivos().length}<small>ativos</small></div></div>
     <div class="metric"><div class="m-l">Próximo ritual</div><div class="m-v" style="font-size:16px">${nextRit?nextRit.data+' '+nextRit.mes:'—'}<small>${nextRit?nextRit.tipo:''}</small></div></div>
   </div><div style="display:flex;flex-direction:column;gap:20px">`;
-  h+=`<div><div class="slbl" style="margin-top:0">Objetivos institucionais</div><div class="card-bare">`;
-  D.objetivos.forEach(o=>{
-    const avg=objAvg(o);
-    const noData=avg===null;
-    const avgNum=avg||0;
-    const avgText=noData?'—':avg+'%';
-    const st=noData?'gray':o.areas.some(a=>a.krs.some(k=>krStatus(k)==='risk'))?'risk':avg>=50?'ok':'warn';
-    h+=`<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--bd)">
-      <span class="mono" style="color:var(--fa);min-width:18px">${o.num}</span>
-      <div style="flex:1;font-size:13px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${o.title}</div>
-      <div class="pw" style="max-width:70px;flex-shrink:0"><div class="pf" style="width:${avgNum}%;background:${pcolor(st)}"></div></div>
-      <span class="mono" style="font-size:11px;color:var(--mu);min-width:34px">${avgText}</span>
-      ${pill(st)}</div>`;
-  });
-  h+=`</div></div><div>`;
-  // alerts
-  h+=`<div class="slbl">Alertas críticos</div><div class="card" style="margin-bottom:16px">`;
+  h+=`<div>`;
+  // alerts (OKRs removidos do Dashboard — só KPIs)
+  h+=`<div class="slbl" style="margin-top:0">Alertas críticos</div><div class="card" style="margin-bottom:16px">`;
   let al=[];
   D.kpis.filter(k=>k.real!==null&&calcStatus(k.op,k.meta,k.real)==='risk').forEach(k=>al.push(`${k.area}: ${k.ind} — ${k.real}${k.unit} vs meta ${k.op}${k.meta}${k.unit}`));
-  D.objetivos.forEach(o=>o.areas.forEach(a=>a.krs.filter(k=>k.pct<25).slice(0,1).forEach(k=>al.push(`OBJ ${o.num}·${a.area}: ${k.label.slice(0,48)}…`))));
   if(al.length){al.slice(0,5).forEach(t=>{h+=`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--bd)"><div style="width:7px;height:7px;border-radius:50%;background:#E24B4A;flex-shrink:0;margin-top:4px"></div><div style="font-size:12px;color:var(--mu)">${t}</div></div>`;});}
   else{h+=`<div style="font-size:13px;color:var(--fa)">Nenhum alerta crítico</div>`;}
   h+=`</div>`;
